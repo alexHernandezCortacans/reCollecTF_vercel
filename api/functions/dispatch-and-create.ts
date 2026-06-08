@@ -19,6 +19,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ whoami: "DISPATCH-AND-CREATE" });
   }
 
+  // CORS
   const origin = "https://collectf.org";
   res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Access-Control-Allow-Credentials", "true");
