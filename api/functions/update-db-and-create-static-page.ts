@@ -1,14 +1,15 @@
-// api/functions/dispatch-and-create.ts
+// api/functions/update-db-and-create-static-page.ts
 import { VercelRequest, VercelResponse } from "@vercel/node";
+import { originConstGlobal, REPO_OWNER_GLOBAL } from "../../consts";
 import { verify } from "jsonwebtoken";
 import axios from "axios";
 import { parse } from "cookie";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 const BOT_TOKEN = process.env.BOT_TOKEN!;
-const REPO_OWNER = 'ErillLab';
-const REPO_NAME = 'reCollecTF';
-const WORKFLOW_FILE_NAME = 'update-db-and-create-page.yml';
+const REPO_OWNER = REPO_OWNER_GLOBAL;
+const REPO_NAME = "reCollecTF";
+const WORKFLOW_FILE_NAME = "update-db-and-create-page.yml";
 
 function b64(str: string) {
   return Buffer.from(str, "utf8").toString("base64");
@@ -16,11 +17,10 @@ function b64(str: string) {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "GET") {
-    return res.status(200).json({ whoami: "DISPATCH-AND-CREATE" });
+    return res.status(200).json({ whoami: "UPDATE-DB-AND-CREATE-STATIC-PAGE" });
   }
 
-  // CORS
-  const origin = "https://collectf.org";
+  const origin = originConstGlobal;
   res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
@@ -40,11 +40,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ error: "Invalid session" });
   }
 
-  // Params
-  const { inputs, expressionId, htmlContent, expressionInfo, uniprotAccession } = req.body || {};
+  const { sqlPath, expressionId, htmlContent, expressionInfo, uniprotAccession } = req.body || {};
 
-  if (!inputs?.queries) {
-    return res.status(400).json({ error: "Missing inputs.queries" });
+  if (!sqlPath) {
+    return res.status(400).json({ error: "Missing sqlPath" });
   }
   if (!expressionId || !/^EXPREG_[a-f0-9A-F]+$/.test(expressionId)) {
     return res.status(400).json({ error: "expressionId inválido o ausente" });
@@ -53,32 +52,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: "htmlContent ausente o vacío" });
   }
 
-  // 1) Creates SQL file in repo
-  const safeTs = new Date().toISOString().replace(/[:.]/g, "-");
-  const sqlPath = `pending-sql/${safeTs}.sql`;
-
-  try {
-    await axios.put(
-      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${encodeURIComponent(sqlPath)}`,
-      {
-        message: `Add SQL for workflow: ${sqlPath}`,
-        content: b64(inputs.queries),
-        branch: "main",
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${BOT_TOKEN}`,
-          Accept: "application/vnd.github+json",
-        },
-      }
-    );
-  } catch (err: any) {
-    const status = err?.response?.status || 500;
-    const data = err?.response?.data || { message: err?.message || "Unknown error" };
-    return res.status(status).json({ error: "Failed to create SQL file", details: data });
-  }
-
-  // 2) Launches dispatch and create workflow with all the data
   try {
     await axios.post(
       `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/workflows/${WORKFLOW_FILE_NAME}/dispatches`,
