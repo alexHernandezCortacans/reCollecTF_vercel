@@ -53,6 +53,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+
+    const htmlPath = `pending-html/${expressionId}.html.gz.b64`;
+
+    await axios.put(
+      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${encodeURIComponent(htmlPath)}`,
+      {
+        message: `Add HTML for: ${expressionId}`,
+        content: b64gzip(htmlContent),
+        branch: "main",
+      },
+      { headers: { Authorization: `Bearer ${BOT_TOKEN}`, Accept: "application/vnd.github+json" } }
+    );
+
     await axios.post(
       `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/workflows/${WORKFLOW_FILE_NAME}/dispatches`,
       {
