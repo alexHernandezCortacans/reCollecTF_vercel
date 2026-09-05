@@ -4,6 +4,12 @@ import { originConstGlobal, REPO_OWNER_GLOBAL } from "../../consts";
 import { verify } from "jsonwebtoken";
 import axios from "axios";
 import { parse } from "cookie";
+import { gzipSync } from "zlib";
+
+function b64gzip(str: string): string {
+  const compressed = gzipSync(Buffer.from(str, "utf8"));
+  return compressed.toString("base64");
+}
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 const BOT_TOKEN = process.env.BOT_TOKEN!;
@@ -68,22 +74,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     await axios.post(
       `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/workflows/${WORKFLOW_FILE_NAME}/dispatches`,
-      {
-        ref: "main",
-        inputs: {
-          sql_path: sqlPath,
-          expression_id: expressionId,
-          expressionInfo: String(expressionInfo),
-          uniprot_accession: uniprotAccession || "",
-        },
+    {
+      ref: "main",
+      inputs: {
+        sql_path: sqlPath,
+        expression_id: expressionId,
+        expressionInfo: String(expressionInfo),
+        uniprot_accession: uniprotAccession || "",
       },
-      {
-        headers: {
-          Authorization: `Bearer ${BOT_TOKEN}`,
-          Accept: "application/vnd.github+json",
-        },
-      }
-    );
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${BOT_TOKEN}`,
+        Accept: "application/vnd.github+json",
+      },
+    });
   } catch (err: any) {
     const status = err?.response?.status || 500;
     const data = err?.response?.data || { message: err?.message || "Unknown error" };
