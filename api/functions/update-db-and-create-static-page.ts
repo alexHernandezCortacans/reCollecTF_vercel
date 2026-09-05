@@ -73,7 +73,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         inputs: {
           sql_path: sqlPath,
           expression_id: expressionId,
-          html_content: b64(htmlContent),
           expressionInfo: String(expressionInfo),
           uniprot_accession: uniprotAccession || "",
         },
